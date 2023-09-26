@@ -5,6 +5,10 @@ import typesystem.SlangType
 class Environment private constructor(private val parent: Environment?) {
     private val vars: MutableMap<String, SlangType> = HashMap()
 
+    companion object {
+        fun new() = Environment(null)
+    }
+
     fun defineVar(name: String, value: SlangType): Boolean {
         if (vars.containsKey(name)) return false
 

@@ -7,6 +7,8 @@ fun main() {
 }
 
 fun repl() {
+    val interpreter = Interpreter()
+
     while (true) {
         try {
             print("slang> ")
@@ -15,18 +17,22 @@ fun repl() {
             val tokens = Tokenizer(line).scan()
             println("Tokens: $tokens")
 
-            val stmt = Parser(tokens).stmt()
-            println("AST: $stmt")
+            val program = Parser(tokens).parse()
+            println("AST: $program")
 
-            Interpreter().interpret(listOf(stmt))
+            interpreter.interpret(program)
         } catch (e: Tokenizer.Err) {
             println("Tokenizer error on line ${e.line}: ${e.msg}")
         } catch (e: Parser.Err) {
-            println("Parser error: ${e.msg}")
+            println("Parser error on '${e.token}': '${e.msg}'")
         } catch (e: Interpreter.TypeErr) {
-            println("Type error: ${e.msg}")
+            println("Type error: '${e.msg}'.")
         } catch (e: Interpreter.UnreachableErr) {
             println("WE MESSED UP BIG TIME")
+        } catch (e: Interpreter.UndefinedVarErr) {
+            println("Undefined variable '${e.ident.ident}'.")
+        } catch (e: Interpreter.VarAlreadyDefinedErr) {
+            println("Variable '${e.ident.ident}' already defined.")
         }
     }
 }

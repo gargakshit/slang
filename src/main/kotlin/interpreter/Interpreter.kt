@@ -9,6 +9,10 @@ import typesystem.SlangType
 class Interpreter : Expr.Visitor<SlangType>, Stmt.Visitor<Unit> {
     class UnreachableErr : Error()
     data class TypeErr(val msg: String) : Error()
+    data class UndefinedVarErr(val ident: Token.Ident) : Error()
+    data class VarAlreadyDefinedErr(val ident: Token.Ident) : Error()
+
+    private val environment = Environment.new()
 
     fun interpret(program: Program) =
         program.forEach { visit(it) }
@@ -62,6 +66,35 @@ class Interpreter : Expr.Visitor<SlangType>, Stmt.Visitor<Unit> {
     override fun visit(literal: Expr.Literal): SlangType =
         literal.value
 
+    override fun visit(slangVar: Expr.Variable): SlangType {
+        return environment.getVar(slangVar.ident.ident) ?: throw UndefinedVarErr(slangVar.ident)
+    }
+
+    override fun visit(assignment: Expr.Assignment): SlangType {
+        val value = visit(assignment.expr)
+        if (!environment.setVar(assignment.ident.ident, value))
+            throw UndefinedVarErr(assignment.ident)
+
+        return value
+    }
+
+    /*
+        Statements.
+     */
+
+    override fun visit(expression: Stmt.Expression) {
+        visit(expression.expr)
+    }
+
+    override fun visit(print: Stmt.Print) {
+        println(visit(print.expr))
+    }
+
+    override fun visit(slangVar: Stmt.Var) {
+        if (!environment.defineVar(slangVar.ident.ident, visit(slangVar.expr)))
+            throw VarAlreadyDefinedErr(slangVar.ident)
+    }
+
     private fun isTruthy(value: SlangType) =
         when (value) {
             SlangType.Nil -> false
@@ -76,19 +109,6 @@ class Interpreter : Expr.Visitor<SlangType>, Stmt.Visitor<Unit> {
             is SlangType.Bool -> right != SlangType.Nil && left.bool == right.bool()
             SlangType.Nil -> right == SlangType.Nil
         }
-
-    /*
-        Statements.
-     */
-
-    override fun visit(expression: Stmt.Expression) {
-        visit(expression.expr)
-    }
-
-    override fun visit(print: Stmt.Print) {
-        val value = visit(print.expr)
-        println(value)
-    }
 }
 
 private fun SlangType.num(): Double =

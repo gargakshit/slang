@@ -9,7 +9,42 @@ class Parser(private val tokens: List<Token>) {
 
     private var current = 0
 
-    fun stmt(): Stmt {
+    fun parse(): Program {
+        val program = mutableListOf<Stmt>()
+        while (!isEnd()) program.add(declaration())
+        return program
+    }
+
+    /*
+        program = declaration* ;
+
+        declaration = var-stmt
+                    | stmt ;
+
+        stmt = expr-stmt
+             | print-stmt
+             | block "{" declaration* "}"
+             | if "(" expr ") stmt (else stmt)?;
+     */
+
+
+    // declaration    -> var-stmt | stmt ;
+    private fun declaration(): Stmt {
+        if (match(Token.Var)) return varStmt()
+        return stmt()
+    }
+
+    // var-stmt       -> "var" ident ("=" expr)? ;
+    private fun varStmt(): Stmt {
+        val ident = advance().ident()
+        val expr = if (match(Token.Equal)) expression() else Expr.Literal(SlangType.Nil)
+        expect("Expected ;", Token.Semi)
+
+        return Stmt.Var(ident, expr)
+    }
+
+    // stmt      -> print-stmt | expr-stmt ;
+    private fun stmt(): Stmt {
         if (match(Token.Print)) return print()
         return expressionStmt()
     }
@@ -30,7 +65,23 @@ class Parser(private val tokens: List<Token>) {
         return Stmt.Expression(expr)
     }
 
-    private fun expression(): Expr = equality()
+    private fun expression(): Expr = assignment()
+
+    // assignment     -> equality ("=" equality) ;
+    private fun assignment(): Expr {
+        var left = equality()
+
+        if (match(Token.Equal)) {
+            val right = equality()
+
+            when (left) {
+                is Expr.Variable -> left = Expr.Assignment(left.ident, right)
+                else -> throw Err(previous(), "Invalid assignment target")
+            }
+        }
+
+        return left
+    }
 
     // equality       → comparison ( ( "!=" | "==" ) comparison )* ;
     private fun equality(): Expr {
@@ -107,6 +158,7 @@ class Parser(private val tokens: List<Token>) {
         when (val token = advance()) {
             is Token.Num -> Expr.Literal(SlangType.Num(token.double))
             is Token.Str -> Expr.Literal(SlangType.Str(token.string))
+            is Token.Ident -> Expr.Variable(token)
 
             Token.True -> Expr.Literal(SlangType.Bool(true))
             Token.False -> Expr.Literal(SlangType.Bool(false))
@@ -162,3 +214,9 @@ class Parser(private val tokens: List<Token>) {
 
     private fun isEnd() = tokens[current] == Token.EOF
 }
+
+private fun Token.ident(): Token.Ident =
+    when (this) {
+        is Token.Ident -> this
+        else -> throw Parser.Err(this, "Expected token")
+    }

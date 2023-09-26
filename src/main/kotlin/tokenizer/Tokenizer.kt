@@ -51,7 +51,11 @@ class Tokenizer(private val source: String) {
             '+' -> Token.Plus
             ';' -> Token.Semi
             '*' -> Token.Star
-            '/' -> Token.Slash
+
+            '/' -> if (match('/')) {
+                while (!isEnd() && advance() != '\n');
+                null
+            } else Token.Slash
 
             '!' -> if (match('=')) Token.BangEqual else Token.Bang
             '=' -> if (match('=')) Token.EqualEqual else Token.Equal

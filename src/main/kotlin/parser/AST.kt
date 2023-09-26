@@ -8,6 +8,8 @@ sealed class Expr {
     data class Unary(val operator: Token, val expr: Expr) : Expr()
     data class Grouping(val expr: Expr) : Expr()
     data class Literal(val value: SlangType) : Expr()
+    data class Variable(var ident: Token.Ident) : Expr()
+    data class Assignment(val ident: Token.Ident, val expr: Expr) : Expr()
 
     interface Visitor<T> {
         fun visit(expr: Expr): T =
@@ -16,28 +18,35 @@ sealed class Expr {
                 is Unary -> visit(expr)
                 is Grouping -> visit(expr)
                 is Literal -> visit(expr)
+                is Variable -> visit(expr)
+                is Assignment -> visit(expr)
             }
 
         fun visit(binary: Binary): T
         fun visit(unary: Unary): T
         fun visit(grouping: Grouping): T
         fun visit(literal: Literal): T
+        fun visit(slangVar: Variable) : T
+        fun visit(assignment: Assignment) : T
     }
 }
 
 sealed class Stmt {
     data class Expression(val expr: Expr) : Stmt()
     data class Print(val expr: Expr) : Stmt()
+    data class Var(val ident: Token.Ident, val expr: Expr) : Stmt()
 
     interface Visitor<T> {
         fun visit(stmt: Stmt): T =
             when (stmt) {
                 is Expression -> visit(stmt)
                 is Print -> visit(stmt)
+                is Var -> visit(stmt)
             }
 
         fun visit(expression: Expression): T
         fun visit(print: Print): T
+        fun visit(slangVar: Var) : T
     }
 }
 
