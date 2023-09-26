@@ -9,18 +9,36 @@ sealed class Expr {
     data class Grouping(val expr: Expr) : Expr()
     data class Literal(val value: SlangType) : Expr()
 
-    abstract class Visitor<T> {
-        fun accept(expr: Expr): T =
+    interface Visitor<T> {
+        fun visit(expr: Expr): T =
             when (expr) {
-                is Binary -> visitBinary(expr)
-                is Unary -> visitUnary(expr)
-                is Grouping -> visitGrouping(expr)
-                is Literal -> visitLiteral(expr)
+                is Binary -> visit(expr)
+                is Unary -> visit(expr)
+                is Grouping -> visit(expr)
+                is Literal -> visit(expr)
             }
 
-        abstract fun visitBinary(binary: Binary): T
-        abstract fun visitUnary(unary: Unary): T
-        abstract fun visitGrouping(grouping: Grouping): T
-        abstract fun visitLiteral(literal: Literal): T
+        fun visit(binary: Binary): T
+        fun visit(unary: Unary): T
+        fun visit(grouping: Grouping): T
+        fun visit(literal: Literal): T
     }
 }
+
+sealed class Stmt {
+    data class Expression(val expr: Expr) : Stmt()
+    data class Print(val expr: Expr) : Stmt()
+
+    interface Visitor<T> {
+        fun visit(stmt: Stmt): T =
+            when (stmt) {
+                is Expression -> visit(stmt)
+                is Print -> visit(stmt)
+            }
+
+        fun visit(expression: Expression): T
+        fun visit(print: Print): T
+    }
+}
+
+typealias Program = List<Stmt>

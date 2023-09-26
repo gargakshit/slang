@@ -8,16 +8,25 @@ fun main() {
 
 fun repl() {
     while (true) {
-        print("slang> ")
+        try {
+            print("slang> ")
 
-        val line = readlnOrNull() ?: return
-        val tokens = Tokenizer(line).scan()
-        println("Tokens: $tokens")
+            val line = readlnOrNull() ?: return
+            val tokens = Tokenizer(line).scan()
+            println("Tokens: $tokens")
 
-        val expr = Parser(tokens).expression()
-        println("AST: $expr")
+            val stmt = Parser(tokens).stmt()
+            println("AST: $stmt")
 
-        val value = Interpreter().accept(expr)
-        println("Evaluated: $value")
+            Interpreter().interpret(listOf(stmt))
+        } catch (e: Tokenizer.Err) {
+            println("Tokenizer error on line ${e.line}: ${e.msg}")
+        } catch (e: Parser.Err) {
+            println("Parser error: ${e.msg}")
+        } catch (e: Interpreter.TypeErr) {
+            println("Type error: ${e.msg}")
+        } catch (e: Interpreter.UnreachableErr) {
+            println("WE MESSED UP BIG TIME")
+        }
     }
 }

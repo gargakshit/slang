@@ -9,7 +9,28 @@ class Parser(private val tokens: List<Token>) {
 
     private var current = 0
 
-    fun expression(): Expr = equality()
+    fun stmt(): Stmt {
+        if (match(Token.Print)) return print()
+        return expressionStmt()
+    }
+
+    // print    -> "print" expression ;
+    private fun print(): Stmt {
+        val expr = expression()
+        expect("Expected ;", Token.Semi)
+
+        return Stmt.Print(expr)
+    }
+
+    // print    -> expression ;
+    private fun expressionStmt(): Stmt {
+        val expr = expression()
+        expect("Expected ;", Token.Semi)
+
+        return Stmt.Expression(expr)
+    }
+
+    private fun expression(): Expr = equality()
 
     // equality       → comparison ( ( "!=" | "==" ) comparison )* ;
     private fun equality(): Expr {
@@ -107,6 +128,10 @@ class Parser(private val tokens: List<Token>) {
     private fun previous() = tokens[current - 1]
 
     private fun peek() = tokens[current]
+
+    private fun expect(msg: String, vararg types: Token) {
+        if (!match(*types)) throw Err(peek(), msg)
+    }
 
     private fun check(type: Token) =
         if (isEnd()) false else when (val typ = peek()) {

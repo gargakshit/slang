@@ -1,16 +1,25 @@
 package interpreter
 
 import parser.Expr
+import parser.Program
+import parser.Stmt
 import tokenizer.Token
 import typesystem.SlangType
 
-class Interpreter : Expr.Visitor<SlangType>() {
+class Interpreter : Expr.Visitor<SlangType>, Stmt.Visitor<Unit> {
     class UnreachableErr : Error()
     data class TypeErr(val msg: String) : Error()
 
-    override fun visitBinary(binary: Expr.Binary): SlangType {
-        val left = accept(binary.left)
-        val right = accept(binary.right)
+    fun interpret(program: Program) =
+        program.forEach { visit(it) }
+
+    /*
+        Expressions.
+     */
+
+    override fun visit(binary: Expr.Binary): SlangType {
+        val left = visit(binary.left)
+        val right = visit(binary.right)
 
         return when (binary.operator) {
             Token.Plus -> {
@@ -37,8 +46,8 @@ class Interpreter : Expr.Visitor<SlangType>() {
         }
     }
 
-    override fun visitUnary(unary: Expr.Unary): SlangType {
-        val value = accept(unary.expr)
+    override fun visit(unary: Expr.Unary): SlangType {
+        val value = visit(unary.expr)
 
         return when (unary.operator) {
             Token.Minus -> SlangType.Num(-value.num())
@@ -47,10 +56,10 @@ class Interpreter : Expr.Visitor<SlangType>() {
         }
     }
 
-    override fun visitGrouping(grouping: Expr.Grouping): SlangType =
-        accept(grouping.expr)
+    override fun visit(grouping: Expr.Grouping): SlangType =
+        visit(grouping.expr)
 
-    override fun visitLiteral(literal: Expr.Literal): SlangType =
+    override fun visit(literal: Expr.Literal): SlangType =
         literal.value
 
     private fun isTruthy(value: SlangType) =
@@ -67,6 +76,19 @@ class Interpreter : Expr.Visitor<SlangType>() {
             is SlangType.Bool -> right != SlangType.Nil && left.bool == right.bool()
             SlangType.Nil -> right == SlangType.Nil
         }
+
+    /*
+        Statements.
+     */
+
+    override fun visit(expression: Stmt.Expression) {
+        visit(expression.expr)
+    }
+
+    override fun visit(print: Stmt.Print) {
+        val value = visit(print.expr)
+        println(value)
+    }
 }
 
 private fun SlangType.num(): Double =
