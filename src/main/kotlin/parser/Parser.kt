@@ -43,10 +43,82 @@ class Parser(private val tokens: List<Token>) {
         return Stmt.Var(ident, expr)
     }
 
-    // stmt      -> print-stmt | expr-stmt ;
+    // stmt      -> print-stmt | expr-stmt | if-stmt | block | while-stmt | for-stmt ;
     private fun stmt(): Stmt {
         if (match(Token.Print)) return print()
+        if (match(Token.If)) return ifStmt()
+        if (match(Token.LBrace)) return blockStmt()
+        if (match(Token.While)) return whileStmt()
+        if (match(Token.For)) return forStmt()
         return expressionStmt()
+    }
+
+    // while    -> "while" "(" expr ")" stmt ;
+    private fun whileStmt(): Stmt {
+        expect("Expected (", Token.LParen)
+        val cond = expression()
+        expect("Expected )", Token.RParen)
+
+        return Stmt.While(cond, stmt())
+    }
+
+    // for     -> "for" "(" declaration? ; expr? ; expr? ")" stmt ;
+    private fun forStmt(): Stmt {
+        expect("Expected (", Token.LParen)
+
+        val initializer = if (!match(Token.Semi)) declaration() else null
+        val cond = if (!match(Token.Semi)) {
+            val expr = expression()
+            expect("Expected ;", Token.Semi)
+            expr
+        } else null
+        val epilogue = if (!match(Token.RParen)) {
+            val expr = expression()
+            expect("Expected )", Token.RParen)
+            expr
+        } else null
+
+        val body = stmt()
+        val whileBody = mutableListOf<Stmt>()
+        whileBody.add(body)
+        epilogue?.let { whileBody.add(Stmt.Expression(it)) }
+
+        val stmts = mutableListOf<Stmt>()
+        initializer?.let { stmts.add(it) }
+        stmts.add(
+            Stmt.While(
+                cond ?: Expr.Literal(SlangType.Bool(true)),
+                Stmt.Block(whileBody)
+            )
+        )
+
+        // Desugaring to while.
+        return Stmt.Block(stmts)
+    }
+
+    // block    -> "{" declaration* "}"
+    private fun blockStmt(): Stmt {
+        val stmts = mutableListOf<Stmt>()
+
+        while (!isEnd() && peek() != Token.RBrace) {
+            if (isEnd()) throw Err(peek(), "Unterminated block")
+            stmts.add(declaration())
+        }
+
+        advance()
+        return Stmt.Block(stmts)
+    }
+
+    // if-stmt   -> "if" "(" expr ")" stmt ("else" stmt)? ;
+    private fun ifStmt(): Stmt {
+        expect("Expected (", Token.LParen)
+        val cond = expression()
+        expect("Expected )", Token.RParen)
+
+        val then = stmt()
+        val elze = if (match(Token.Else)) stmt() else null
+
+        return Stmt.If(cond, then, elze)
     }
 
     // print    -> "print" expression ;

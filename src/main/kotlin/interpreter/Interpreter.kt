@@ -12,7 +12,7 @@ class Interpreter : Expr.Visitor<SlangType>, Stmt.Visitor<Unit> {
     data class UndefinedVarErr(val ident: Token.Ident) : Error()
     data class VarAlreadyDefinedErr(val ident: Token.Ident) : Error()
 
-    private val environment = Environment.new()
+    private var environment = Environment.new()
 
     fun interpret(program: Program) =
         program.forEach { visit(it) }
@@ -93,6 +93,24 @@ class Interpreter : Expr.Visitor<SlangType>, Stmt.Visitor<Unit> {
     override fun visit(slangVar: Stmt.Var) {
         if (!environment.defineVar(slangVar.ident.ident, visit(slangVar.expr)))
             throw VarAlreadyDefinedErr(slangVar.ident)
+    }
+
+    override fun visit(slangIf: Stmt.If) {
+        if (isTruthy(visit(slangIf.cond))) visit(slangIf.then)
+        else slangIf.elze?.let { visit(it) }
+    }
+
+    override fun visit(block: Stmt.Block) {
+        val env = environment
+
+        environment = environment.fork()
+        interpret(block.stmts)
+        environment = env
+    }
+
+    override fun visit(slangWhile: Stmt.While) {
+        while (isTruthy(visit(slangWhile.cond)))
+            visit(slangWhile.stmt)
     }
 
     private fun isTruthy(value: SlangType) =
