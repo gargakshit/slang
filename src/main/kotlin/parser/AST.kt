@@ -10,6 +10,7 @@ sealed class Expr {
     data class Literal(val value: SlangType) : Expr()
     data class Variable(var ident: Token.Ident) : Expr()
     data class Assignment(val ident: Token.Ident, val expr: Expr) : Expr()
+    data class Call(val callee: Expr, val args: List<Expr>) : Expr()
 
     interface Visitor<T> {
         fun visit(expr: Expr): T =
@@ -20,6 +21,7 @@ sealed class Expr {
                 is Literal -> visit(expr)
                 is Variable -> visit(expr)
                 is Assignment -> visit(expr)
+                is Call -> visit(expr)
             }
 
         fun visit(binary: Binary): T
@@ -28,6 +30,7 @@ sealed class Expr {
         fun visit(literal: Literal): T
         fun visit(slangVar: Variable): T
         fun visit(assignment: Assignment): T
+        fun visit(call: Call): T
     }
 }
 
@@ -38,6 +41,12 @@ sealed class Stmt {
     data class If(val cond: Expr, val then: Stmt, val elze: Stmt?) : Stmt()
     data class Block(val stmts: List<Stmt>) : Stmt()
     data class While(val cond: Expr, val stmt: Stmt) : Stmt()
+    data class Fun(
+        val name: Token.Ident,
+        val args: List<Token.Ident>,
+        val body: List<Stmt>
+    ) : Stmt()
+    data class Return(val expr: Expr) : Stmt()
 
     interface Visitor<T> {
         fun visit(stmt: Stmt): T =
@@ -48,6 +57,8 @@ sealed class Stmt {
                 is If -> visit(stmt)
                 is Block -> visit(stmt)
                 is While -> visit(stmt)
+                is Fun -> visit(stmt)
+                is Return -> visit(stmt)
             }
 
         fun visit(expression: Expression): T
@@ -55,7 +66,9 @@ sealed class Stmt {
         fun visit(slangVar: Var): T
         fun visit(slangIf: If): T
         fun visit(block: Block): T
-        fun visit(slangWhile: While) : T
+        fun visit(slangWhile: While): T
+        fun visit(slangFun: Fun): T
+        fun visit(slangReturn: Return) : T
     }
 }
 

@@ -2,6 +2,7 @@ package parser
 
 import tokenizer.Token
 import typesystem.SlangType
+import kotlin.math.exp
 
 @Suppress("DuplicatedCode")
 class Parser(private val tokens: List<Token>) {
@@ -28,10 +29,30 @@ class Parser(private val tokens: List<Token>) {
      */
 
 
-    // declaration    -> var-stmt | stmt ;
+    // declaration    -> var-stmt | stmt | fun-decl ;
     private fun declaration(): Stmt {
         if (match(Token.Var)) return varStmt()
+        if (match(Token.Fun)) return funDecl()
         return stmt()
+    }
+
+    // fun-decl       -> token ( (token, )* ) { stmt* }
+    private fun funDecl(): Stmt {
+        val name = advance().ident()
+        expect("Expected '(' after function name.", Token.LParen)
+
+        val args = mutableListOf<Token.Ident>()
+
+        if (!check(Token.RParen)) {
+            do {
+                args.add(advance().ident())
+            } while (match(Token.Comma))
+        }
+
+        expect("Expected ')' after argument left.", Token.RParen)
+        expect("Expected '{' before function body.", Token.LBrace)
+
+        return Stmt.Fun(name, args, (blockStmt() as Stmt.Block).stmts)
     }
 
     // var-stmt       -> "var" ident ("=" expr)? ;
@@ -43,14 +64,22 @@ class Parser(private val tokens: List<Token>) {
         return Stmt.Var(ident, expr)
     }
 
-    // stmt      -> print-stmt | expr-stmt | if-stmt | block | while-stmt | for-stmt ;
+    // stmt      -> print-stmt | expr-stmt | if-stmt | block | while-stmt | for-stmt | return-stmt ;
     private fun stmt(): Stmt {
         if (match(Token.Print)) return print()
         if (match(Token.If)) return ifStmt()
         if (match(Token.LBrace)) return blockStmt()
         if (match(Token.While)) return whileStmt()
         if (match(Token.For)) return forStmt()
+        if (match(Token.Return)) return returnStmt()
         return expressionStmt()
+    }
+
+    // return-stmt -> expr ";" ;
+    private fun returnStmt(): Stmt {
+        val expr = expression()
+        expect("Expected ;", Token.Semi)
+        return Stmt.Return(expr)
     }
 
     // while    -> "while" "(" expr ")" stmt ;
@@ -129,7 +158,7 @@ class Parser(private val tokens: List<Token>) {
         return Stmt.Print(expr)
     }
 
-    // print    -> expression ;
+    // expr-stmt -> expression ;
     private fun expressionStmt(): Stmt {
         val expr = expression()
         expect("Expected ;", Token.Semi)
@@ -211,7 +240,7 @@ class Parser(private val tokens: List<Token>) {
         return left
     }
 
-    // unary          → ( "!" | "-" ) unary | primary ;
+    // unary          → ( "!" | "-" ) unary | call ;
 
     private fun unary(): Expr {
         while (match(Token.Bang, Token.Minus)) {
@@ -221,7 +250,29 @@ class Parser(private val tokens: List<Token>) {
             return Expr.Unary(operator, expr)
         }
 
-        return primary()
+        return call()
+    }
+
+    // call        -> primary ( "(" args? ")" )* ;
+    // args        -> expr ( "," expr )* ;
+    private fun call(): Expr {
+        var expr = primary()
+
+        while (true) {
+            if (match(Token.LParen)) {
+                val args = mutableListOf<Expr>()
+                if (!check(Token.RParen)) {
+                    do args.add(expression()) while (match(Token.Comma))
+                }
+
+                expect("Expected ')' after function arguments.", Token.RParen)
+                expr = Expr.Call(expr, args)
+            } else {
+                break
+            }
+        }
+
+        return expr
     }
 
     // primary        → NUMBER | STRING | "true" | "false" | "nil"

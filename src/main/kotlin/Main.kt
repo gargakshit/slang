@@ -1,9 +1,22 @@
 import interpreter.Interpreter
 import parser.Parser
 import tokenizer.Tokenizer
+import java.io.File
 
-fun main() {
-    repl()
+fun main(args: Array<String>) {
+    if (args.isEmpty()) repl()
+    else runFile(args[0])
+}
+
+fun runFile(path: String) {
+    val file = File(path)
+
+    val content = file.readText()
+    val tokens = Tokenizer(content).scan()
+    val program = Parser(tokens).parse()
+
+    val interpreter = Interpreter()
+    interpreter.interpret(program)
 }
 
 fun repl() {

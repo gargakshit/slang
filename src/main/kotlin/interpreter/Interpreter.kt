@@ -12,10 +12,27 @@ class Interpreter : Expr.Visitor<SlangType>, Stmt.Visitor<Unit> {
     data class UndefinedVarErr(val ident: Token.Ident) : Error()
     data class VarAlreadyDefinedErr(val ident: Token.Ident) : Error()
 
-    private var environment = Environment.new()
+    private data class ReturnValue(val value: SlangType) : Error()
+
+    val globals = Environment.new()
+    private var environment = globals
 
     fun interpret(program: Program) =
         program.forEach { visit(it) }
+
+    fun interpret(stmts: List<Stmt>, env: Environment): SlangType {
+        val oldEnv = environment
+        environment = env
+
+        return try {
+            interpret(stmts)
+            environment = oldEnv
+            SlangType.Nil
+        } catch (e: ReturnValue) {
+            environment = oldEnv
+            e.value
+        }
+    }
 
     /*
         Expressions.
@@ -78,6 +95,12 @@ class Interpreter : Expr.Visitor<SlangType>, Stmt.Visitor<Unit> {
         return value
     }
 
+    override fun visit(call: Expr.Call): SlangType {
+        return visit(call.callee)
+            .callable()
+            .call(this, call.args.map { visit(it) })
+    }
+
     /*
         Statements.
      */
@@ -113,6 +136,15 @@ class Interpreter : Expr.Visitor<SlangType>, Stmt.Visitor<Unit> {
             visit(slangWhile.stmt)
     }
 
+    override fun visit(slangFun: Stmt.Fun) {
+        if (!environment.defineVar(slangFun.name.ident, SlangType.Function(slangFun)))
+            throw VarAlreadyDefinedErr(slangFun.name)
+    }
+
+    override fun visit(slangReturn: Stmt.Return) {
+        throw ReturnValue(visit(slangReturn.expr))
+    }
+
     private fun isTruthy(value: SlangType) =
         when (value) {
             SlangType.Nil -> false
@@ -126,6 +158,7 @@ class Interpreter : Expr.Visitor<SlangType>, Stmt.Visitor<Unit> {
             is SlangType.Str -> right != SlangType.Nil && left.string == right.str()
             is SlangType.Bool -> right != SlangType.Nil && left.bool == right.bool()
             SlangType.Nil -> right == SlangType.Nil
+            is SlangType.Callable -> false
         }
 }
 
@@ -145,4 +178,10 @@ private fun SlangType.str(): String =
     when (this) {
         is SlangType.Str -> string
         else -> throw Interpreter.TypeErr("Expected a string, got ${typeString()}.")
+    }
+
+private fun SlangType.callable(): SlangType.Callable =
+    when (this) {
+        is SlangType.Callable -> this
+        else -> throw Interpreter.TypeErr("Can only call a callable.")
     }
