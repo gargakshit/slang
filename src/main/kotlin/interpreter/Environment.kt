@@ -3,6 +3,8 @@ package interpreter
 import typesystem.SlangType
 
 class Environment private constructor(private val parent: Environment?) {
+    data class ScopeError(val depth: Int) : Error()
+
     private val vars: MutableMap<String, SlangType> = HashMap()
 
     companion object {
@@ -30,6 +32,23 @@ class Environment private constructor(private val parent: Environment?) {
         getEnv(name)?.vars?.get(name)
 
     fun fork(): Environment = Environment(this)
+
+    fun getAt(depth: Int, name: String): SlangType? =
+        getEnvAt(depth).vars[name]
+
+    fun setAt(depth: Int, name: String, value: SlangType) {
+        getEnvAt(depth).vars[name] = value
+    }
+
+    private fun getEnvAt(depth: Int): Environment {
+        var env = this
+        for (i in 0..<depth) {
+            val parent = env.parent ?: throw ScopeError(depth)
+            env = parent
+        }
+
+        return env
+    }
 
     private fun getEnv(name: String): Environment? {
         if (vars.containsKey(name)) return this

@@ -73,7 +73,7 @@ fun Node(data) {
 	return execute;
 }
 
-fun _print(data111) { print data111; }
+fun _print(data) { print data; }
 fun add(left, right) { return left + right; }
 fun add_1(value) { return value + 1; }
 

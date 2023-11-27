@@ -1,4 +1,5 @@
 import interpreter.Interpreter
+import interpreter.Resolver
 import parser.Parser
 import tokenizer.Tokenizer
 import java.io.File
@@ -14,14 +15,12 @@ fun runFile(path: String) {
     val content = file.readText()
     val tokens = Tokenizer(content).scan()
     val program = Parser(tokens).parse()
+    val locals = Resolver().resolve(program)
 
-    val interpreter = Interpreter()
-    interpreter.interpret(program)
+    Interpreter(locals).interpret(program)
 }
 
 fun repl() {
-    val interpreter = Interpreter()
-
     while (true) {
         try {
             print("slang> ")
@@ -33,7 +32,10 @@ fun repl() {
             val program = Parser(tokens).parse()
             println("AST: $program")
 
-            interpreter.interpret(program)
+            val locals = Resolver().resolve(program)
+            println("Locals: $locals")
+
+            Interpreter(locals).interpret(program)
         } catch (e: Tokenizer.Err) {
             println("Tokenizer error on line ${e.line}: ${e.msg}")
         } catch (e: Parser.Err) {

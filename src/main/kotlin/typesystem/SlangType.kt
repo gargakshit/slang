@@ -25,9 +25,9 @@ sealed interface SlangType {
         fun call(interpreter: Interpreter, args: List<SlangType>): SlangType
     }
 
-    data class Function(val decl: Fun) : Callable {
+    data class Function(val decl: Fun, var env: Environment) : Callable {
         override fun call(interpreter: Interpreter, args: List<SlangType>): SlangType {
-            val env = interpreter.globals.fork()
+            val env = env.fork()
             for (i in args.indices)
                 env.defineVar(decl.args[i].ident, args[i])
 

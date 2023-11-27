@@ -100,7 +100,7 @@ class Tokenizer(private val source: String) {
 
     private fun isDigit(char: Char?) = char in '0'..'9'
 
-    private fun isAlpha(char: Char?) = char in 'a'..'z' || char in 'A'..'Z'
+    private fun isAlpha(char: Char?) = char in 'a'..'z' || char in 'A'..'Z' || char == '_'
 
     private fun isAlphaNumeric(char: Char?) = isAlpha(char) || isDigit(char)
 

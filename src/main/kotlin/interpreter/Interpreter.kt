@@ -6,7 +6,7 @@ import parser.Stmt
 import tokenizer.Token
 import typesystem.SlangType
 
-class Interpreter : Expr.Visitor<SlangType>, Stmt.Visitor<Unit> {
+class Interpreter(private val locals: Map<Int, Int>) : Expr.Visitor<SlangType>, Stmt.Visitor<Unit> {
     class UnreachableErr : Error()
     data class TypeErr(val msg: String) : Error()
     data class UndefinedVarErr(val ident: Token.Ident) : Error()
@@ -14,7 +14,7 @@ class Interpreter : Expr.Visitor<SlangType>, Stmt.Visitor<Unit> {
 
     private data class ReturnValue(val value: SlangType) : Error()
 
-    val globals = Environment.new()
+    private val globals = Environment.new()
     private var environment = globals
 
     fun interpret(program: Program) =
@@ -84,13 +84,22 @@ class Interpreter : Expr.Visitor<SlangType>, Stmt.Visitor<Unit> {
         literal.value
 
     override fun visit(slangVar: Expr.Variable): SlangType {
-        return environment.getVar(slangVar.ident.ident) ?: throw UndefinedVarErr(slangVar.ident)
+        val depth = locals[System.identityHashCode(slangVar)]
+        if (depth != null)
+            return environment.getAt(depth, slangVar.ident.ident)!!
+
+        return globals.getVar(slangVar.ident.ident) ?: throw UndefinedVarErr(slangVar.ident)
     }
 
     override fun visit(assignment: Expr.Assignment): SlangType {
         val value = visit(assignment.expr)
-        if (!environment.setVar(assignment.ident.ident, value))
-            throw UndefinedVarErr(assignment.ident)
+
+        val depth = locals[System.identityHashCode(assignment)]
+        if (depth != null) {
+            environment.setAt(depth, assignment.ident.ident, value)
+        } else {
+            globals.setVar(assignment.ident.ident, value)
+        }
 
         return value
     }
@@ -137,7 +146,7 @@ class Interpreter : Expr.Visitor<SlangType>, Stmt.Visitor<Unit> {
     }
 
     override fun visit(slangFun: Stmt.Fun) {
-        if (!environment.defineVar(slangFun.name.ident, SlangType.Function(slangFun)))
+        if (!environment.defineVar(slangFun.name.ident, SlangType.Function(slangFun, environment)))
             throw VarAlreadyDefinedErr(slangFun.name)
     }
 
