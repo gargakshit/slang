@@ -89,3 +89,5 @@ root("map", add_1)("for-each", _print); // Prints 2 3 4 5 6.
 
 print "added";
 print root("reduce", Tuple2(0, add)); // Prints 15.
+
+print str(root);

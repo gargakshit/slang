@@ -11,11 +11,27 @@ class Interpreter(private val locals: Map<Int, Int>) : Expr.Visitor<SlangType>, 
     data class TypeErr(val msg: String) : Error()
     data class UndefinedVarErr(val ident: Token.Ident) : Error()
     data class VarAlreadyDefinedErr(val ident: Token.Ident) : Error()
+    data class ArityErr(val got: Int, val expected: Int) : Error()
 
     private data class ReturnValue(val value: SlangType) : Error()
 
     private val globals = Environment.new()
     private var environment = globals
+
+    init {
+        globals.defineVar("clock", object : SlangType.Callable {
+            override fun call(interpreter: Interpreter, args: List<SlangType>): SlangType {
+                return SlangType.Num(System.currentTimeMillis().toDouble())
+            }
+        })
+
+        globals.defineVar("str", object : SlangType.Callable {
+            override fun call(interpreter: Interpreter, args: List<SlangType>): SlangType {
+                if (args.size != 1) throw ArityErr(args.size, 1)
+                return SlangType.Str(args[0].toString())
+            }
+        })
+    }
 
     fun interpret(program: Program) =
         program.forEach { visit(it) }
