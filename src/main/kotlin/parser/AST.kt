@@ -3,7 +3,9 @@ package parser
 import tokenizer.Token
 import typesystem.SlangType
 
-sealed class Expr {
+sealed class AST
+
+sealed class Expr : AST() {
     data class Binary(val left: Expr, val operator: Token, val right: Expr) : Expr()
     data class Unary(val operator: Token, val expr: Expr) : Expr()
     data class Grouping(val expr: Expr) : Expr()
@@ -34,7 +36,7 @@ sealed class Expr {
     }
 }
 
-sealed class Stmt {
+sealed class Stmt : AST() {
     data class Expression(val expr: Expr) : Stmt()
     data class Print(val expr: Expr) : Stmt()
     data class Var(val ident: Token.Ident, val expr: Expr) : Stmt()
@@ -46,6 +48,7 @@ sealed class Stmt {
         val args: List<Token.Ident>,
         val body: List<Stmt>
     ) : Stmt()
+
     data class Return(val expr: Expr) : Stmt()
 
     interface Visitor<T> {

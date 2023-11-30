@@ -1,12 +1,22 @@
+import analyzer.Analyzer
+import analyzer.BareReturnAnalyzer
+import analyzer.EmptyLoopAnalyzer
 import interpreter.Interpreter
 import interpreter.Resolver
 import parser.Parser
+import parser.Program
 import tokenizer.Tokenizer
 import java.io.File
 
 fun main(args: Array<String>) {
     if (args.isEmpty()) repl()
     else runFile(args[0])
+}
+
+val analyzers = listOf(BareReturnAnalyzer(), EmptyLoopAnalyzer())
+
+fun analyze(program: Program) {
+    analyzers.forEach { it.run(program) }
 }
 
 fun runFile(path: String) {
@@ -17,6 +27,8 @@ fun runFile(path: String) {
         val tokens = Tokenizer(content).scan()
         val program = Parser(tokens).parse()
         val locals = Resolver().resolve(program)
+
+        analyze(program)
 
         Interpreter(locals).interpret(program)
     } catch (e: Tokenizer.Err) {
