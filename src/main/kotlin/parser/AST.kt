@@ -68,7 +68,7 @@ sealed class Stmt {
         fun visit(block: Block): T
         fun visit(slangWhile: While): T
         fun visit(slangFun: Fun): T
-        fun visit(slangReturn: Return) : T
+        fun visit(slangReturn: Return): T
     }
 }
 

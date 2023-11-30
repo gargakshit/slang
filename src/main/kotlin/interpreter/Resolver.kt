@@ -37,12 +37,12 @@ class Resolver : Stmt.Visitor<Unit>, Expr.Visitor<Unit> {
     }
 
     private fun declare(token: Token.Ident) {
-        if (scopes.isEmpty()) return;
+        if (scopes.isEmpty()) return
         scopes.peek()[token.ident] = false
     }
 
     private fun define(token: Token.Ident) {
-        if (scopes.isEmpty()) return;
+        if (scopes.isEmpty()) return
         scopes.peek()[token.ident] = true
     }
 

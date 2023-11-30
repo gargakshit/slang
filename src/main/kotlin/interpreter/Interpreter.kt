@@ -11,7 +11,7 @@ class Interpreter(private val locals: Map<Int, Int>) : Expr.Visitor<SlangType>, 
     data class TypeErr(val msg: String) : Error()
     data class UndefinedVarErr(val ident: Token.Ident) : Error()
     data class VarAlreadyDefinedErr(val ident: Token.Ident) : Error()
-    data class ArityErr(val got: Int, val expected: Int) : Error()
+    data class ArityErr(val got: Int, val expected: Int, val name: String) : Error()
 
     private data class ReturnValue(val value: SlangType) : Error()
 
@@ -27,8 +27,30 @@ class Interpreter(private val locals: Map<Int, Int>) : Expr.Visitor<SlangType>, 
 
         globals.defineVar("str", object : SlangType.Callable {
             override fun call(interpreter: Interpreter, args: List<SlangType>): SlangType {
-                if (args.size != 1) throw ArityErr(args.size, 1)
+                if (args.size != 1) throw ArityErr(args.size, 1, "str")
                 return SlangType.Str(args[0].toString())
+            }
+        })
+
+        globals.defineVar("str_part", object : SlangType.Callable {
+            override fun call(interpreter: Interpreter, args: List<SlangType>): SlangType {
+                if (args.size != 3) throw ArityErr(args.size, 3, "str_part")
+                return SlangType.Str(args[0].str().split(args[1].str())[args[2].num().toInt()])
+            }
+        })
+
+        globals.defineVar("str_count", object : SlangType.Callable {
+            override fun call(interpreter: Interpreter, args: List<SlangType>): SlangType {
+                if (args.size != 2) throw ArityErr(args.size, 2, "str_count")
+                val arg1 = args[1].str()
+                return SlangType.Num(args[0].str().count { it.toString() == arg1 }.toDouble())
+            }
+        })
+
+        globals.defineVar("str_to_num", object : SlangType.Callable {
+            override fun call(interpreter: Interpreter, args: List<SlangType>): SlangType {
+                if (args.size != 1) throw ArityErr(args.size, 1, "str_to_num")
+                return args[0].str().toDoubleOrNull()?.let { SlangType.Num(it) } ?: SlangType.Nil
             }
         })
     }

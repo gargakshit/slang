@@ -28,7 +28,7 @@ sealed interface SlangType {
     data class Function(val decl: Fun, var env: Environment) : Callable {
         override fun call(interpreter: Interpreter, args: List<SlangType>): SlangType {
             if (decl.args.size != args.size)
-                throw Interpreter.ArityErr(args.size, decl.args.size)
+                throw Interpreter.ArityErr(args.size, decl.args.size, decl.name.ident)
 
             val env = env.fork()
             for (i in args.indices)

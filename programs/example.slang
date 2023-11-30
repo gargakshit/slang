@@ -14,80 +14,100 @@ fun Tuple2(first, second) {
 	return execute;
 }
 
-fun Node(data) {
-	var next = nil;
+fun Stack(data) {
+	var prev;
 
 	fun execute(op, arg) {
-		if (op == "get-data") {
-			return data;
-		}
-
-		if (op == "get-next") {
-			return next;
-		}
-
-		if (op == "push") {
-			next = Node(arg);
-			return next;
-		}
-
-		if (op == "for-each") {
-			arg(data);
-			var _node = next;
-
-			while (_node != nil) {
-				arg(_node("get-data", nil));
-				_node = _node("get-next", nil);
-			}
-
+		if (op == "set-prev") {
+			prev = arg;
 			return nil;
 		}
 
-		if (op == "map") {
-			var _root = Node(arg(data));
-			var _mapped = _root;
-			var _node = next;
-
-			while (_node != nil) {
-				_mapped = _mapped("push", arg(_node("get-data", nil)));
-				_node = _node("get-next", nil);
-			}
-
-			return _root;
+		if (op == "push") {
+			var node = Stack(arg("get-second", nil));
+			node("set-prev", arg("get-first", nil));
+			return node;
 		}
 
-		if (op == "reduce") {
-			var accumulator = arg("get-first", nil);
-			var fn = arg("get-second", nil);
+		if (op == "peek") {
+			return data;
+		}
 
-			// Implemented using for-each!
-			fun reduction(_data) {
-				accumulator = fn(accumulator, _data);
-			}
-
-			execute("for-each", reduction);
-			return accumulator;
+		if (op == "pop") {
+			return prev;
 		}
 	}
 
 	return execute;
 }
 
-fun _print(data111) { print data111; }
-fun add(left, right) { return left + right; }
-fun add_1(value) { return value + 1; }
+fun isNumber(string) {
+	return str_to_num(string) != nil;
+}
 
-var root = Node(1);
-// We won't store pushed nodes.
-root("push", 2)("push", 3)("push", 4)("push", 5);
+var code = "5 dup * dup + . 5 4 swap > ! .";
+var spaces = str_count(code, " ");
+var stack = Stack(nil);
 
-print "for-each";
-root("for-each", _print); // Prints 1 2 3 4 5 in their own lines!
+fun bin_op(fn) {
+	var first = stack("peek", nil);
+	stack = stack("pop", nil);
 
-print "1 added";
-root("map", add_1)("for-each", _print); // Prints 2 3 4 5 6.
+	var second = stack("peek", nil);
+	stack = stack("pop", nil);
 
-print "added";
-print root("reduce", Tuple2(0, add)); // Prints 15.
+	stack = stack("push", Tuple2(stack, fn(first, second)));
+}
 
-print str(root);
+fun exec(token) {
+	if (isNumber(token)) {
+		stack = stack("push", Tuple2(stack, str_to_num(token)));
+	} else if (token == "dup") {
+		stack = stack("push", Tuple2(stack, stack("peek", nil)));
+	} else if (token == "*") {
+		fun op(a, b) { return a * b; }
+		bin_op(op);
+	} else if (token == "+") {
+		fun op(a, b) { return a + b; }
+		bin_op(op);
+	} else if (token == "-") {
+		fun op(a, b) { return a - b; }
+		bin_op(op);
+	} else if (token == "/") {
+		fun op(a, b) { return a / b; }
+		bin_op(op);
+	} else if (token == "<") {
+		fun op(a, b) { return a < b; }
+		bin_op(op);
+	} else if (token == "<=") {
+		fun op(a, b) { return a <= b; }
+		bin_op(op);
+	} else if (token == ">") {
+		fun op(a, b) { return a > b; }
+		bin_op(op);
+	} else if (token == ">=") {
+		fun op(a, b) { return a >= b; }
+		bin_op(op);
+	} else if (token == ".") {
+		print stack("peek", nil);
+		stack = stack("pop", nil);
+	} else if (token == "!") {
+		var first = stack("peek", nil);
+		stack = stack("pop", nil);
+		stack = stack("push", Tuple2(stack, !first));
+	} else if (token == "swap") {
+		var first = stack("peek", nil);
+		stack = stack("pop", nil);
+
+		var second = stack("peek", nil);
+		stack = stack("pop", nil);
+
+		stack = stack("push", Tuple2(stack, first));
+		stack = stack("push", Tuple2(stack, second));
+	}
+}
+
+for (var i = 0; i <= spaces; i = i + 1) {
+	var token = str_part(code, " ", i);
+	exec(token);
+}

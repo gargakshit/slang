@@ -10,14 +10,30 @@ fun main(args: Array<String>) {
 }
 
 fun runFile(path: String) {
-    val file = File(path)
+    try {
+        val file = File(path)
 
-    val content = file.readText()
-    val tokens = Tokenizer(content).scan()
-    val program = Parser(tokens).parse()
-    val locals = Resolver().resolve(program)
+        val content = file.readText()
+        val tokens = Tokenizer(content).scan()
+        val program = Parser(tokens).parse()
+        val locals = Resolver().resolve(program)
 
-    Interpreter(locals).interpret(program)
+        Interpreter(locals).interpret(program)
+    } catch (e: Tokenizer.Err) {
+        println("Tokenizer error on line ${e.line}: ${e.msg}")
+    } catch (e: Parser.Err) {
+        println("Parser error on '${e.token}': '${e.msg}'")
+    } catch (e: Interpreter.TypeErr) {
+        println("TypeError: '${e.msg}'.")
+    } catch (e: Interpreter.UnreachableErr) {
+        println("WE MESSED UP BIG TIME")
+    } catch (e: Interpreter.UndefinedVarErr) {
+        println("Undefined variable '${e.ident.ident}'.")
+    } catch (e: Interpreter.VarAlreadyDefinedErr) {
+        println("Variable '${e.ident.ident}' already defined.")
+    } catch (e: Interpreter.ArityErr) {
+        println("${e.name} requires ${e.expected} arguments, got ${e.got}.")
+    }
 }
 
 fun repl() {
